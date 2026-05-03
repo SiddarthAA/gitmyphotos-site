@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitMyPhotos — Your Photos. Your Repo. Your Rules.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.29/bundled/lenis.min.js"></script>
+<style>
+:root {
+    --primary: #0a0a0a;
+    --surface: #111111;
+    --text-primary: #f0f0f0;
+}
+html { overflow-x: hidden; }
+body {
+    background-color: var(--primary);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    cursor: none;
+}
+::-webkit-scrollbar { display: none; }
+* { -ms-overflow-style: none; scrollbar-width: none; box-sizing: border-box; }
+::selection { background-color: #f0f0f0; color: #0a0a0a; }
+
+.font-display { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.02em; }
+.font-mono    { font-family: 'DM Mono', monospace; }
+
+.bg-noise {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.animate-marquee      { display: inline-flex; animation: marquee 28s linear infinite; white-space: nowrap; }
+.animate-marquee-slow { display: inline-flex; animation: marquee 50s linear infinite; white-space: nowrap; }
+
+.card-spotlight { --mouse-x: 50%; --mouse-y: 50%; }
+.card-spotlight::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(700px circle at var(--mouse-x) var(--mouse-y), rgba(255,255,255,0.05), transparent 40%);
+    z-index: 0; opacity: 0; transition: opacity 0.4s; pointer-events: none;
+}
+.card-spotlight:hover::before { opacity: 1; }
+
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+.animate-blink { animation: blink 1s step-end infinite; }
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+.fade-up { opacity: 0; }
+.fade-up.visible { animation: fadeUp 0.75s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+.pipeline-row { transition: background-color 0.25s; }
+.pipeline-row:hover { background-color: #111111; }
+.pipeline-row:hover .pipeline-num { opacity: 0.45 !important; }
+</style>
+</head>
+<body class="relative min-h-screen">
+
+    <!-- Grid Background -->
+    <div class="fixed inset-0 z-0 pointer-events-none opacity-[0.03]"
+         style="background-image:linear-gradient(rgba(240,240,240,1) 1px,transparent 1px),linear-gradient(90deg,rgba(240,240,240,1) 1px,transparent 1px);background-size:50px 50px;"></div>
+
+    <!-- Noise Overlay -->
+    <div class="pointer-events-none fixed inset-0 z-[100] opacity-[0.04] bg-noise mix-blend-overlay"></div>
+
+    <!-- Custom Cursor -->
+    <div id="cursor" class="pointer-events-none fixed left-0 top-0 z-[110] flex h-3 w-3 items-center justify-center bg-white mix-blend-difference transition-[width,height] duration-300">
+        <span id="cursor-text" class="font-mono text-[10px] text-[#0a0a0a] opacity-0 tracking-widest uppercase"></span>
+    </div>
+
+
+    <!-- ─── TOP MARQUEE ─────────────────────────────────────────────── -->
+    <div class="fixed top-0 z-[60] flex w-full overflow-hidden border-b border-[rgba(255,255,255,0.08)] bg-[#0a0a0a] py-1.5">
+        <div class="animate-marquee opacity-25">
+            <span class="font-mono text-[10px] tracking-widest text-[#f0f0f0] px-4 uppercase">
+                YOUR PHOTOS &bull; YOUR REPO &bull; YOUR RULES &bull; ZERO LOCK-IN &bull;&nbsp;
+                YOUR PHOTOS &bull; YOUR REPO &bull; YOUR RULES &bull; ZERO LOCK-IN &bull;&nbsp;
+                YOUR PHOTOS &bull; YOUR REPO &bull; YOUR RULES &bull; ZERO LOCK-IN &bull;&nbsp;
+                YOUR PHOTOS &bull; YOUR REPO &bull; YOUR RULES &bull; ZERO LOCK-IN &bull;&nbsp;
+            </span>
+            <span class="font-mono text-[10px] tracking-widest text-[#f0f0f0] px-4 uppercase">
+                YOUR PHOTOS &bull; YOUR REPO &bull; YOUR RULES &bull; ZERO LOCK-IN &bull;&nbsp;
+                YOUR PHOTOS &bull; YOUR REPO &bull; YOUR RULES &bull; ZERO LOCK-IN &bull;&nbsp;
+                YOUR PHOTOS &bull; YOUR REPO &bull; YOUR RULES &bull; ZERO LOCK-IN &bull;&nbsp;
+                YOUR PHOTOS &bull; YOUR REPO &bull; YOUR RULES &bull; ZERO LOCK-IN &bull;&nbsp;
+            </span>
+        </div>
+    </div>
+
+
+    <!-- ─── NAV ─────────────────────────────────────────────────────── -->
+    <nav class="fixed top-[30px] z-50 w-full bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-[rgba(255,255,255,0.08)]">
+        <div class="mx-auto flex max-w-[100rem] w-[95vw] items-center justify-between py-4 px-[clamp(1.5rem,4vw,4rem)]">
+            <a href="https://github.com/SiddarthAA/gitmyphotos" target="_blank" rel="noopener noreferrer"
+               class="rounded-full border border-[rgba(255,255,255,0.1)] px-5 py-2 font-mono text-[10px] tracking-widest text-[#f0f0f0] transition-colors hover:bg-[#f0f0f0] hover:text-[#0a0a0a] uppercase">
+                VIEW SOURCE
+            </a>
+            <a href="#" class="font-mono text-[12px] tracking-[0.2em] text-[#f0f0f0]">GITMYPHOTOS</a>
+            <a href="#initiate"
+               class="rounded-full border border-[#f0f0f0] bg-[#f0f0f0] px-5 py-2 font-mono text-[10px] tracking-widest text-[#0a0a0a] transition-colors hover:bg-transparent hover:text-[#f0f0f0] uppercase">
+                START FOR FREE
+            </a>
+        </div>
+    </nav>
+
+
+    <!-- ─── §01 HERO ─────────────────────────────────────────────────── -->
+    <header class="relative flex min-h-[100vh] flex-col items-center justify-end text-center w-full z-10
+                   pt-[clamp(8rem,10vw,10rem)] px-[clamp(1.5rem,5vw,4rem)] pb-0">
+
+        <div class="mx-auto flex max-w-[100rem] w-full flex-col items-center gap-8 z-10 pb-[clamp(4rem,8vw,8rem)]">
+
+            <div class="font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)] fade-up">
+                /001/ THE VAULT
+            </div>
+
+            <h1 class="font-display text-[clamp(4rem,10.5vw,8.5rem)] leading-[0.88] text-[#f0f0f0] uppercase fade-up"
+                style="animation-delay:0.1s">
+                Every Photo You've<br>
+                Ever Taken.<br>
+                Permanently Yours.
+            </h1>
+
+            <p class="font-mono text-[13px] leading-[1.75] text-[rgba(255,255,255,0.45)] max-w-[50ch] mt-2 fade-up"
+               style="animation-delay:0.2s">
+                Stop renting access to your own memories. GitMyPhotos commits your
+                photos directly into your private GitHub repository — structured,
+                versioned, and retrievable forever. No subscription. No server.
+                No middleman with a kill switch.
+            </p>
+
+            <div class="mt-6 flex flex-wrap justify-center gap-4 fade-up" style="animation-delay:0.3s">
+                <a href="#initiate"
+                   class="bg-[#f0f0f0] border border-[#f0f0f0] px-10 py-4 font-mono text-[11px] text-[#0a0a0a] transition-all hover:bg-transparent hover:text-[#f0f0f0] uppercase tracking-widest">
+                    CLAIM YOUR VAULT
+                </a>
+                <a href="#pipeline"
+                   class="bg-transparent border border-[rgba(255,255,255,0.15)] px-10 py-4 font-mono text-[11px] text-[#f0f0f0] transition-all hover:bg-[#f0f0f0] hover:text-[#0a0a0a] uppercase tracking-widest">
+                    SEE HOW IT WORKS
+                </a>
+            </div>
+        </div>
+
+        <!-- Hero bottom marquee -->
+        <div class="w-full overflow-hidden border-t border-[rgba(255,255,255,0.08)] bg-[#111111]/60 py-2 backdrop-blur-sm">
+            <div class="animate-marquee-slow opacity-25">
+                <span class="font-mono text-[10px] tracking-[0.2em] text-[#f0f0f0] px-4 uppercase">
+                    GITMYPHOTOS &bull; GITHUB-NATIVE &bull; OPEN SOURCE &bull; SELF-HOSTED &bull; MIT LICENSED &bull; NO CLOUD &bull; EST 2026 &bull;&nbsp;
+                    GITMYPHOTOS &bull; GITHUB-NATIVE &bull; OPEN SOURCE &bull; SELF-HOSTED &bull; MIT LICENSED &bull; NO CLOUD &bull; EST 2026 &bull;&nbsp;
+                </span>
+                <span class="font-mono text-[10px] tracking-[0.2em] text-[#f0f0f0] px-4 uppercase">
+                    GITMYPHOTOS &bull; GITHUB-NATIVE &bull; OPEN SOURCE &bull; SELF-HOSTED &bull; MIT LICENSED &bull; NO CLOUD &bull; EST 2026 &bull;&nbsp;
+                    GITMYPHOTOS &bull; GITHUB-NATIVE &bull; OPEN SOURCE &bull; SELF-HOSTED &bull; MIT LICENSED &bull; NO CLOUD &bull; EST 2026 &bull;&nbsp;
+                </span>
+            </div>
+        </div>
+    </header>
+
+
+    <!-- ─── §02 THE PROBLEM WITH CLOUD ──────────────────────────────── -->
+    <section class="relative z-10 border-t border-[rgba(255,255,255,0.08)] bg-[#0a0a0a]
+                    py-[clamp(6rem,10vw,10rem)] px-[clamp(1.5rem,5vw,4rem)]">
+        <div class="mx-auto max-w-[100rem] w-[95vw]">
+
+            <div class="flex flex-col items-start gap-4 mb-[clamp(4rem,6vw,6rem)] max-w-[62ch]">
+                <div class="font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)]">
+                    [02] THE PROBLEM WITH CLOUD
+                </div>
+                <h2 class="font-display text-[clamp(2.5rem,5vw,4.25rem)] leading-[0.93] text-[#f0f0f0]">
+                    The Subscription Trap Has An Expiry Date On Your Memories.
+                </h2>
+            </div>
+
+            <div class="w-full h-px bg-[rgba(255,255,255,0.08)] mb-[clamp(3rem,5vw,5rem)]"></div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-[clamp(3rem,6vw,6rem)]">
+                <div class="flex flex-col gap-5 md:pr-16 lg:pr-28">
+                    <span class="font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)]">/ THE TRAP /</span>
+                    <p class="text-[14px] leading-[1.8] text-[rgba(255,255,255,0.4)]">
+                        Every major photo platform runs the same playbook.
+                        Draw you in with free storage. Compress your originals.
+                        Lock your library behind proprietary formats. Then raise
+                        the price and dare you to leave. Migrating away costs
+                        weeks of your life — if the export tool works at all.
+                        Your photos aren't stored. They're <em>held</em>.
+                    </p>
+                </div>
+                <div class="flex flex-col gap-5">
+                    <span class="font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)]">/ THE EXIT /</span>
+                    <p class="text-[14px] leading-[1.8] text-[#f0f0f0]">
+                        GitMyPhotos is not a storage provider. It is a pipeline.
+                        Your photos are pushed, in full resolution, to a private
+                        GitHub repository that belongs entirely to you. We run
+                        locally on your machine. We touch nothing we don't need
+                        to. The day you stop using GitMyPhotos, every single
+                        photo is still exactly where you left it — in your repo,
+                        yours forever, no extraction required.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- ─── §03 THE ENGINEERING ──────────────────────────────────────── -->
+    <section class="relative z-10 border-t border-[rgba(255,255,255,0.08)] bg-[#0a0a0a]
+                    py-[clamp(6rem,10vw,10rem)] px-[clamp(1.5rem,5vw,4rem)]">
+        <div class="mx-auto max-w-[100rem] w-[95vw]">
+
+            <div class="mb-[clamp(3rem,5vw,5rem)]">
+                <div class="font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)] mb-4">
+                    [03] THE ENGINEERING
+                </div>
+                <h2 class="font-display text-[clamp(2.5rem,5vw,4.25rem)] leading-[0.93] text-[#f0f0f0]">
+                    One Upload.<br>Six Steps.<br>One Commit.
+                </h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 border border-[rgba(255,255,255,0.08)] bg-[#111111]
+                        divide-y md:divide-y-0 md:divide-x divide-[rgba(255,255,255,0.08)]">
+
+                <div class="card-spotlight group relative overflow-hidden p-[clamp(2rem,3vw,3rem)] min-h-[340px] flex flex-col">
+                    <div class="relative z-10 font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)] mb-8">/INGESTION/</div>
+                    <div class="relative z-10 mt-auto flex flex-col gap-3">
+                        <h3 class="font-display text-[28px] text-[#f0f0f0] leading-tight">Drop a photo and the pipeline fires immediately.</h3>
+                        <p class="text-[13px] leading-[1.7] text-[rgba(255,255,255,0.4)]">
+                            EXIF data extracted. GPS coordinates resolved. Collision-proof filename stamped
+                            from capture time. Thumbnail generated at 400px. Metadata sidecar written.
+                            Everything batched into a single atomic Git operation.
+                            Ten photos or ten thousand — always one commit.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card-spotlight group relative overflow-hidden p-[clamp(2rem,3vw,3rem)] min-h-[340px] flex flex-col">
+                    <div class="relative z-10 font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)] mb-8">/STRUCTURE/</div>
+                    <div class="relative z-10 mt-auto flex flex-col gap-3">
+                        <h3 class="font-display text-[28px] text-[#f0f0f0] leading-tight">A Repository That Thinks For You.</h3>
+                        <p class="text-[13px] leading-[1.7] text-[rgba(255,255,255,0.4)]">
+                            Three folders. One manifest. Zero ambiguity.
+                            <span class="font-mono text-[11px] text-[rgba(255,255,255,0.65)]">originals/</span> holds full-resolution files, untouched.
+                            <span class="font-mono text-[11px] text-[rgba(255,255,255,0.65)]">thumbs/</span> holds fast-loading previews.
+                            <span class="font-mono text-[11px] text-[rgba(255,255,255,0.65)]">meta/</span> holds a JSON sidecar per photo.
+                            <span class="font-mono text-[11px] text-[rgba(255,255,255,0.65)]">manifest.json</span> indexes everything.
+                            Date-partitioned. Human-readable. Git-native.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card-spotlight group relative overflow-hidden p-[clamp(2rem,3vw,3rem)] min-h-[340px] flex flex-col">
+                    <div class="relative z-10 font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)] mb-8">/RETRIEVAL/</div>
+                    <div class="relative z-10 mt-auto flex flex-col gap-3">
+                        <h3 class="font-display text-[28px] text-[#f0f0f0] leading-tight">Near-Zero GitHub API Usage At Browse Time.</h3>
+                        <p class="text-[13px] leading-[1.7] text-[rgba(255,255,255,0.4)]">
+                            The manifest loads once per session — one API call. Thumbnails stream from local
+                            disk after the first view. Previews generated on demand, cached immediately.
+                            Originals fetched directly from your repo on request. A library of ten thousand
+                            photos costs the same API budget as a library of ten. One call. That's the ceiling.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+
+    <!-- ─── §04 BY THE NUMBERS ───────────────────────────────────────── -->
+    <section class="relative z-10 border-y border-[rgba(255,255,255,0.08)] bg-[#111111] overflow-hidden">
+        <div class="mx-auto max-w-[100rem] w-[95vw] px-[clamp(1.5rem,4vw,4rem)] pt-8 pb-2">
+            <div class="font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)]">[04] BY THE NUMBERS</div>
+        </div>
+        <div class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4
+                    divide-y lg:divide-y-0 lg:divide-x divide-[rgba(255,255,255,0.08)]">
+
+            <div class="flex flex-col py-[clamp(3rem,4vw,4rem)] px-[clamp(2.5rem,4vw,4rem)]">
+                <div class="font-display text-[clamp(3.5rem,5vw,5rem)] text-[#f0f0f0] leading-none mb-3">
+                    <span class="metric-counter" data-target="1" data-decimal="0">0</span>
+                </div>
+                <span class="font-mono text-[10px] uppercase tracking-widest text-[#f0f0f0] mb-2">Git commit per batch</span>
+                <span class="text-[12px] text-[rgba(255,255,255,0.4)]">No matter how many photos are in the queue.</span>
+            </div>
+
+            <div class="flex flex-col py-[clamp(3rem,4vw,4rem)] px-[clamp(2.5rem,4vw,4rem)]">
+                <div class="font-display text-[clamp(3.5rem,5vw,5rem)] text-[#f0f0f0] leading-none mb-3">
+                    <span class="metric-counter" data-target="0" data-decimal="0">0</span>
+                </div>
+                <span class="font-mono text-[10px] uppercase tracking-widest text-[#f0f0f0] mb-2">External dependencies</span>
+                <span class="text-[12px] text-[rgba(255,255,255,0.4)]">No S3. No Redis. No Postgres. Nothing outside Docker.</span>
+            </div>
+
+            <div class="flex flex-col py-[clamp(3rem,4vw,4rem)] px-[clamp(2.5rem,4vw,4rem)]">
+                <div class="font-display text-[clamp(3.5rem,5vw,5rem)] text-[#f0f0f0] leading-none mb-3">
+                    <span class="metric-counter" data-target="1" data-decimal="0">0</span>
+                </div>
+                <span class="font-mono text-[10px] uppercase tracking-widest text-[#f0f0f0] mb-2">GitHub API call</span>
+                <span class="text-[12px] text-[rgba(255,255,255,0.4)]">To load your entire library. Every time.</span>
+            </div>
+
+            <div class="flex flex-col py-[clamp(3rem,4vw,4rem)] px-[clamp(2.5rem,4vw,4rem)]">
+                <div class="flex items-baseline font-display text-[clamp(3.5rem,5vw,5rem)] text-[#f0f0f0] leading-none mb-3">
+                    <span class="metric-counter" data-target="100" data-decimal="0">0</span><span class="text-[rgba(255,255,255,0.35)] ml-1">%</span>
+                </div>
+                <span class="font-mono text-[10px] uppercase tracking-widest text-[#f0f0f0] mb-2">Yours. Forever.</span>
+                <span class="text-[12px] text-[rgba(255,255,255,0.4)]">Your repo. Your token. Your terms. Always.</span>
+            </div>
+
+        </div>
+    </section>
+
+
+    <!-- ─── §05 THE PIPELINE ─────────────────────────────────────────── -->
+    <section id="pipeline" class="relative z-10 bg-[#0a0a0a] py-[clamp(6rem,10vw,10rem)] px-[clamp(1.5rem,5vw,4rem)]
+                                   border-b border-[rgba(255,255,255,0.08)]">
+        <div class="mx-auto max-w-[100rem] w-[95vw]">
+
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-[clamp(3rem,5vw,5rem)]">
+                <div>
+                    <div class="font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)] mb-3">[05] THE PIPELINE</div>
+                    <h2 class="font-display text-[clamp(2.5rem,5vw,4.25rem)] leading-[0.93] text-[#f0f0f0]">
+                        How a photo goes from your device<br>to your repository in under ten seconds.
+                    </h2>
+                </div>
+                <p class="font-mono text-[11px] text-[rgba(255,255,255,0.35)] max-w-[28ch] leading-[1.7] md:text-right flex-shrink-0">
+                    Four stages.<br>One atomic commit.<br>Zero compromise.
+                </p>
+            </div>
+
+            <!-- 2×2 Photo Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 border-l border-t border-[rgba(255,255,255,0.1)]">
+
+                <!-- 01 RECEIVE -->
+                <div class="hover-image group relative overflow-hidden bg-[#0d0d0d] border-r border-b border-[rgba(255,255,255,0.1)] h-[clamp(22rem,32vw,28rem)] cursor-none">
+                    <img src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=1200&auto=format&fit=crop"
+                         alt="Ingest Layer"
+                         class="absolute inset-0 h-full w-full object-cover opacity-[0.18] grayscale contrast-125 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:opacity-[0.38] group-hover:scale-[1.03]">
+                    <!-- vignette -->
+                    <div class="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/30 via-transparent to-[#0a0a0a] z-10 pointer-events-none"></div>
+                    <!-- scan-line texture -->
+                    <div class="absolute inset-0 z-10 pointer-events-none opacity-[0.06]"
+                         style="background-image:repeating-linear-gradient(0deg,rgba(255,255,255,0.15) 0px,rgba(255,255,255,0.15) 1px,transparent 1px,transparent 3px);"></div>
+                    <!-- content -->
+                    <div class="absolute inset-0 p-7 z-20 flex flex-col justify-between">
+                        <div class="flex items-start justify-between">
+                            <div class="font-display text-[56px] text-[#f0f0f0] opacity-[0.18] leading-none select-none group-hover:opacity-[0.35] transition-opacity duration-500">01</div>
+                            <div class="font-mono text-[9px] tracking-[0.2em] text-[rgba(255,255,255,0.3)] border border-[rgba(255,255,255,0.1)] px-2.5 py-1 uppercase">RECEIVE</div>
+                        </div>
+                        <div class="translate-y-2 group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
+                            <span class="font-mono text-[10px] text-[rgba(255,255,255,0.5)] tracking-widest block mb-3 uppercase">/ STEP 01: INGEST</span>
+                            <h3 class="font-display text-[26px] text-[#f0f0f0] leading-tight mb-3">File lands in the ingest layer.</h3>
+                            <p class="text-[12px] leading-[1.7] text-[rgba(255,255,255,0.45)] max-w-[44ch] opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75">
+                                Format validated. Size checked. A collision-proof ID is stamped using
+                                the EXIF capture timestamp down to the millisecond.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 02 PROCESS -->
+                <div class="hover-image group relative overflow-hidden bg-[#0d0d0d] border-r border-b border-[rgba(255,255,255,0.1)] h-[clamp(22rem,32vw,28rem)] cursor-none">
+                    <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1200&auto=format&fit=crop"
+                         alt="Processing Node"
+                         class="absolute inset-0 h-full w-full object-cover opacity-[0.18] grayscale contrast-125 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:opacity-[0.38] group-hover:scale-[1.03]">
+                    <div class="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/30 via-transparent to-[#0a0a0a] z-10 pointer-events-none"></div>
+                    <div class="absolute inset-0 z-10 pointer-events-none opacity-[0.06]"
+                         style="background-image:repeating-linear-gradient(0deg,rgba(255,255,255,0.15) 0px,rgba(255,255,255,0.15) 1px,transparent 1px,transparent 3px);"></div>
+                    <div class="absolute inset-0 p-7 z-20 flex flex-col justify-between">
+                        <div class="flex items-start justify-between">
+                            <div class="font-display text-[56px] text-[#f0f0f0] opacity-[0.18] leading-none select-none group-hover:opacity-[0.35] transition-opacity duration-500">02</div>
+                            <div class="font-mono text-[9px] tracking-[0.2em] text-[rgba(255,255,255,0.3)] border border-[rgba(255,255,255,0.1)] px-2.5 py-1 uppercase">PROCESS</div>
+                        </div>
+                        <div class="translate-y-2 group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
+                            <span class="font-mono text-[10px] text-[rgba(255,255,255,0.5)] tracking-widest block mb-3 uppercase">/ STEP 02: PROCESS</span>
+                            <h3 class="font-display text-[26px] text-[#f0f0f0] leading-tight mb-3">EXIF pulled. GPS resolved. Thumbnail generated.</h3>
+                            <p class="text-[12px] leading-[1.7] text-[rgba(255,255,255,0.45)] max-w-[44ch] opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75">
+                                Metadata JSON compiled. Three artefacts — original, thumb, sidecar —
+                                staged and ready for a single atomic operation.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 03 COMMIT -->
+                <div class="hover-image group relative overflow-hidden bg-[#0d0d0d] border-r border-b border-[rgba(255,255,255,0.1)] h-[clamp(22rem,32vw,28rem)] cursor-none">
+                    <img src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1200&auto=format&fit=crop"
+                         alt="Commit Protocol"
+                         class="absolute inset-0 h-full w-full object-cover opacity-[0.18] grayscale contrast-125 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:opacity-[0.38] group-hover:scale-[1.03]">
+                    <div class="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/30 via-transparent to-[#0a0a0a] z-10 pointer-events-none"></div>
+                    <div class="absolute inset-0 z-10 pointer-events-none opacity-[0.06]"
+                         style="background-image:repeating-linear-gradient(0deg,rgba(255,255,255,0.15) 0px,rgba(255,255,255,0.15) 1px,transparent 1px,transparent 3px);"></div>
+                    <div class="absolute inset-0 p-7 z-20 flex flex-col justify-between">
+                        <div class="flex items-start justify-between">
+                            <div class="font-display text-[56px] text-[#f0f0f0] opacity-[0.18] leading-none select-none group-hover:opacity-[0.35] transition-opacity duration-500">03</div>
+                            <div class="font-mono text-[9px] tracking-[0.2em] text-[rgba(255,255,255,0.3)] border border-[rgba(255,255,255,0.1)] px-2.5 py-1 uppercase">COMMIT</div>
+                        </div>
+                        <div class="translate-y-2 group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
+                            <span class="font-mono text-[10px] text-[rgba(255,255,255,0.5)] tracking-widest block mb-3 uppercase">/ STEP 03: COMMIT</span>
+                            <h3 class="font-display text-[26px] text-[#f0f0f0] leading-tight mb-3">One Git Tree API call. Atomic. Permanent.</h3>
+                            <p class="text-[12px] leading-[1.7] text-[rgba(255,255,255,0.45)] max-w-[44ch] opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75">
+                                Original, thumbnail, metadata sidecar, updated manifest and
+                                regenerated README — committed together. Verifiable. Irreversible.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 04 SERVE -->
+                <div class="hover-image group relative overflow-hidden bg-[#0d0d0d] border-r border-b border-[rgba(255,255,255,0.1)] h-[clamp(22rem,32vw,28rem)] cursor-none">
+                    <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200&auto=format&fit=crop"
+                         alt="Serve Infrastructure"
+                         class="absolute inset-0 h-full w-full object-cover opacity-[0.18] grayscale contrast-125 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:opacity-[0.38] group-hover:scale-[1.03]">
+                    <div class="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/30 via-transparent to-[#0a0a0a] z-10 pointer-events-none"></div>
+                    <div class="absolute inset-0 z-10 pointer-events-none opacity-[0.06]"
+                         style="background-image:repeating-linear-gradient(0deg,rgba(255,255,255,0.15) 0px,rgba(255,255,255,0.15) 1px,transparent 1px,transparent 3px);"></div>
+                    <div class="absolute inset-0 p-7 z-20 flex flex-col justify-between">
+                        <div class="flex items-start justify-between">
+                            <div class="font-display text-[56px] text-[#f0f0f0] opacity-[0.18] leading-none select-none group-hover:opacity-[0.35] transition-opacity duration-500">04</div>
+                            <div class="font-mono text-[9px] tracking-[0.2em] text-[rgba(255,255,255,0.3)] border border-[rgba(255,255,255,0.1)] px-2.5 py-1 uppercase">SERVE</div>
+                        </div>
+                        <div class="translate-y-2 group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
+                            <span class="font-mono text-[10px] text-[rgba(255,255,255,0.5)] tracking-widest block mb-3 uppercase">/ STEP 04: SERVE</span>
+                            <h3 class="font-display text-[26px] text-[#f0f0f0] leading-tight mb-3">Manifest cached. Thumbnails from disk. API: zero.</h3>
+                            <p class="text-[12px] leading-[1.7] text-[rgba(255,255,255,0.45)] max-w-[44ch] opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75">
+                                Previews generated once, cached forever. Originals pulled direct
+                                from your repo on request. GitHub API usage: effectively zero.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Pull Quote -->
+            <div class="mt-[clamp(5rem,8vw,8rem)] flex flex-col items-center text-center max-w-[72ch] mx-auto gap-6">
+                <div class="w-full h-px bg-[rgba(255,255,255,0.08)]"></div>
+                <h3 class="font-display text-[clamp(2.5rem,4.5vw,4rem)] leading-[0.93] text-[#f0f0f0] mt-8">
+                    You Are The Infrastructure.<br>We Are Just The Pipeline.
+                </h3>
+                <p class="font-mono text-[12px] leading-[1.75] text-[rgba(255,255,255,0.45)] max-w-[58ch]">
+                    The complexity lives in the code, not in your workflow.
+                    Drop photos. Watch them commit. Browse your library.
+                    Download the original the moment you need it.
+                    That's the entire surface area of this product.
+                </p>
+                <div class="mt-4">
+                    <a href="#initiate"
+                       class="inline-block bg-[#f0f0f0] border border-[#f0f0f0] px-10 py-4 font-mono text-[11px] text-[#0a0a0a] transition-all hover:bg-transparent hover:text-[#f0f0f0] uppercase tracking-widest">
+                        INITIALISE YOUR VAULT
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+
+    <!-- ─── §06 GETTING STARTED ──────────────────────────────────────── -->
+    <section class="relative z-10 bg-[#0a0a0a] py-[clamp(6rem,10vw,10rem)] px-[clamp(1.5rem,5vw,4rem)]">
+        <div class="mx-auto max-w-[100rem] w-[95vw]">
+
+            <div class="font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)] mb-2">[06] GETTING STARTED</div>
+            <h2 class="font-display text-[clamp(2.5rem,5vw,4.25rem)] leading-[0.93] text-[#f0f0f0] mb-[clamp(3rem,5vw,5rem)]">
+                Three steps.<br>One command.<br>Operational in under five minutes.
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <div class="card-spotlight relative border border-[rgba(255,255,255,0.08)] bg-[#111111] p-[clamp(2rem,3vw,3rem)] overflow-hidden min-h-[380px] flex flex-col justify-end">
+                    <div class="absolute -right-4 -bottom-6 font-display text-[160px] text-[#f0f0f0] opacity-[0.025] leading-none select-none z-0">01</div>
+                    <div class="relative z-10 flex flex-col gap-3">
+                        <span class="font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)]">/01 ─── DEPLOY</span>
+                        <h3 class="font-display text-[34px] text-[#f0f0f0] leading-tight">Clone &amp; Boot</h3>
+                        <p class="text-[13px] leading-[1.7] text-[rgba(255,255,255,0.4)]">
+                            <span class="font-mono text-[11px] text-[rgba(255,255,255,0.7)]">git clone</span> the repository.
+                            Copy <span class="font-mono text-[11px] text-[rgba(255,255,255,0.7)]">.env.example</span> to
+                            <span class="font-mono text-[11px] text-[rgba(255,255,255,0.7)]">.env</span>.
+                            Run <span class="font-mono text-[11px] text-[rgba(255,255,255,0.7)]">docker compose up</span>.
+                            Two containers start: frontend on :3000, backend on :8000.
+                            No cloud accounts. No API keys. No configuration beyond a single file.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card-spotlight relative border border-[rgba(255,255,255,0.08)] bg-[#111111] p-[clamp(2rem,3vw,3rem)] overflow-hidden min-h-[380px] flex flex-col justify-end">
+                    <div class="absolute -right-4 -bottom-6 font-display text-[160px] text-[#f0f0f0] opacity-[0.025] leading-none select-none z-0">02</div>
+                    <div class="relative z-10 flex flex-col gap-3">
+                        <span class="font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)]">/02 ─── AUTHORISE</span>
+                        <h3 class="font-display text-[34px] text-[#f0f0f0] leading-tight">Connect Your Repository</h3>
+                        <p class="text-[13px] leading-[1.7] text-[rgba(255,255,255,0.4)]">
+                            Open <span class="font-mono text-[11px] text-[rgba(255,255,255,0.7)]">localhost:3000</span>.
+                            Authenticate via GitHub OAuth — one click. Choose an existing private repository
+                            or provision a new one from the UI. GitMyPhotos scaffolds the folder structure
+                            and commits the initial manifest in one atomic operation. You're live.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card-spotlight relative border border-[rgba(255,255,255,0.08)] bg-[#111111] p-[clamp(2rem,3vw,3rem)] overflow-hidden min-h-[380px] flex flex-col justify-end">
+                    <div class="absolute -right-4 -bottom-6 font-display text-[160px] text-[#f0f0f0] opacity-[0.025] leading-none select-none z-0">03</div>
+                    <div class="relative z-10 flex flex-col gap-3">
+                        <span class="font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)]">/03 ─── OPERATE</span>
+                        <h3 class="font-display text-[34px] text-[#f0f0f0] leading-tight">Upload. Commit. Own.</h3>
+                        <p class="text-[13px] leading-[1.7] text-[rgba(255,255,255,0.4)]">
+                            Drag photos into the interface. The pipeline runs on your machine.
+                            Every photo lands in your repository. Browse through the local cache layer.
+                            Pull up a single photo. Download the original at any time.
+                            Nothing is stored anywhere but your repo.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+
+    <!-- ─── §07 DEPLOY NOW ───────────────────────────────────────────── -->
+    <section id="initiate"
+             class="relative z-10 border-t border-[rgba(255,255,255,0.08)] bg-[#0a0a0a] min-h-[80vh]
+                    flex flex-col justify-center py-[clamp(8rem,12vw,12rem)] px-[clamp(1.5rem,5vw,4rem)]">
+        <div class="mx-auto flex max-w-[100rem] w-[95vw] flex-col items-center text-center gap-6">
+
+            <div class="font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)] mb-2">[07] DEPLOY NOW</div>
+
+            <h2 class="font-display text-[clamp(3.5rem,8vw,7rem)] leading-[0.9] text-[#f0f0f0]">
+                No Waitlist.<br>No Pricing Page.<br>No Account On Our Servers.
+            </h2>
+
+            <p class="font-mono text-[12px] leading-[1.8] text-[rgba(255,255,255,0.45)] max-w-[58ch] mt-2">
+                This is open source software. You run it. You own it. We just built it.
+                One command stands between you and a photo library that will outlast any
+                startup, acquisition, or pricing change the cloud industry throws at you.
+            </p>
+
+            <!-- Terminal -->
+            <div class="mt-6 mb-2 w-full max-w-[380px] bg-[#0d0d0d] border border-[rgba(255,255,255,0.1)]">
+                <div class="flex items-center gap-2 px-4 py-2.5 border-b border-[rgba(255,255,255,0.06)]">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[rgba(255,255,255,0.08)]"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-[rgba(255,255,255,0.08)]"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-[rgba(255,255,255,0.08)]"></span>
+                    <span class="ml-auto font-mono text-[9px] text-[rgba(255,255,255,0.2)] tracking-widest">zsh — gitmyphotos</span>
+                </div>
+                <div class="flex items-center gap-3 px-5 py-5">
+                    <span class="font-mono text-[13px] text-[rgba(255,255,255,0.25)]">$</span>
+                    <span class="font-mono text-[13px] text-[#4ade80]">docker compose up</span>
+                    <div class="w-[9px] h-[18px] bg-[#4ade80] animate-blink opacity-70 ml-0.5"></div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-4 w-full max-w-[420px] mt-2">
+                <a href="https://github.com/SiddarthAA/gitmyphotos" target="_blank" rel="noopener noreferrer"
+                   class="flex-1 bg-transparent border border-[rgba(255,255,255,0.15)] px-6 py-4 font-mono text-[11px] text-[#f0f0f0] transition-all hover:bg-[#f0f0f0] hover:text-[#0a0a0a] uppercase tracking-widest text-center">
+                    VIEW ON GITHUB
+                </a>
+                <a href="#"
+                   class="flex-1 bg-transparent border border-[rgba(255,255,255,0.15)] px-6 py-4 font-mono text-[11px] text-[#f0f0f0] transition-all hover:bg-[#f0f0f0] hover:text-[#0a0a0a] uppercase tracking-widest text-center">
+                    READ THE DOCS
+                </a>
+            </div>
+
+            <p class="font-mono text-[10px] text-[rgba(255,255,255,0.25)] mt-4">
+                No telemetry. No analytics. No data leaves your machine. MIT Licensed. Auditable. Forkable. Yours.
+            </p>
+
+        </div>
+    </section>
+
+
+    <!-- ─── FOOTER ───────────────────────────────────────────────────── -->
+    <footer class="relative z-10 border-t border-[rgba(255,255,255,0.08)] bg-[#0a0a0a]
+                   pt-[clamp(4rem,8vw,8rem)] pb-8 px-[clamp(1.5rem,5vw,4rem)]">
+
+        <div class="mx-auto max-w-[100rem] w-[95vw] grid grid-cols-1 md:grid-cols-4 gap-[clamp(3rem,6vw,6rem)]">
+
+            <div class="col-span-1 md:col-span-2">
+                <span class="font-mono text-[14px] tracking-[0.2em] text-[#f0f0f0] mb-5 block">GITMYPHOTOS</span>
+                <p class="text-[13px] leading-[1.75] text-[rgba(255,255,255,0.4)] max-w-[42ch]">
+                    Infrastructure-grade photo storage<br>
+                    for people who read the terms of service<br>
+                    and decided they'd rather own their data.
+                </p>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <span class="font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.2)] mb-1">Navigate</span>
+                <a href="#pipeline" class="text-[13px] text-[rgba(255,255,255,0.4)] hover:text-[#f0f0f0] transition-colors">How It Works</a>
+                <a href="#pipeline" class="text-[13px] text-[rgba(255,255,255,0.4)] hover:text-[#f0f0f0] transition-colors">The Pipeline</a>
+                <a href="#initiate" class="text-[13px] text-[rgba(255,255,255,0.4)] hover:text-[#f0f0f0] transition-colors">Deploy Locally</a>
+                <a href="https://github.com/SiddarthAA/gitmyphotos" target="_blank" rel="noopener noreferrer"
+                   class="text-[13px] text-[rgba(255,255,255,0.4)] hover:text-[#f0f0f0] transition-colors">GitHub Repository</a>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <span class="font-mono text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.2)] mb-1">Legal</span>
+                <a href="https://github.com/SiddarthAA/gitmyphotos/blob/main/LICENSE" target="_blank" rel="noopener noreferrer"
+                   class="text-[13px] text-[rgba(255,255,255,0.4)] hover:text-[#f0f0f0] transition-colors">MIT License</a>
+                <span class="text-[13px] text-[rgba(255,255,255,0.25)]">No Terms Required</span>
+                <span class="text-[13px] text-[rgba(255,255,255,0.25)]">No Privacy Policy</span>
+                <a href="https://github.com/SiddarthAA/gitmyphotos" target="_blank" rel="noopener noreferrer"
+                   class="text-[13px] text-[#f0f0f0] hover:text-white transition-colors mt-1">Contribute</a>
+            </div>
+
+        </div>
+
+        <div class="mx-auto max-w-[100rem] w-[95vw] mt-[clamp(4rem,8vw,8rem)] pt-6 border-t border-[rgba(255,255,255,0.08)]
+                    flex flex-col md:flex-row justify-between items-center gap-4">
+            <span class="font-mono text-[11px] text-[rgba(255,255,255,0.25)] tracking-widest uppercase">
+                GITMYPHOTOS &copy; 2026. Built in public. Owned by you.
+            </span>
+            <a href="https://github.com/SiddarthAA/gitmyphotos" target="_blank" rel="noopener noreferrer"
+               class="font-mono text-[11px] text-[rgba(255,255,255,0.25)] hover:text-[#f0f0f0] transition-colors">
+                github.com/SiddarthAA/gitmyphotos
+            </a>
+        </div>
+
+    </footer>
+
+
+    <script>
+        // ─── Lenis smooth scroll ─────────────────────────────────────────
+        const lenis = new Lenis({
+            duration: 1.2,
+            easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            direction: 'vertical',
+            gestureDirection: 'vertical',
+            smooth: true,
+            mouseMultiplier: 1,
+            smoothTouch: false,
+            touchMultiplier: 2,
+            infinite: false,
+        });
+        (function raf(t) { lenis.raf(t); requestAnimationFrame(raf); })(0);
+
+        // ─── Custom cursor ───────────────────────────────────────────────
+        const cursor = document.getElementById('cursor');
+        let mx = 0, my = 0, cx = 0, cy = 0;
+        window.addEventListener('mousemove', e => {
+            mx = e.clientX; my = e.clientY;
+            document.querySelectorAll('.card-spotlight').forEach(card => {
+                const r = card.getBoundingClientRect();
+                card.style.setProperty('--mouse-x', `${e.clientX - r.left}px`);
+                card.style.setProperty('--mouse-y', `${e.clientY - r.top}px`);
+            });
+        });
+        (function updateCursor() {
+            cx += (mx - cx) * 0.18;
+            cy += (my - cy) * 0.18;
+            cursor.style.transform = `translate3d(${cx}px,${cy}px,0) translate(-50%,-50%)`;
+            requestAnimationFrame(updateCursor);
+        })();
+
+        // ─── Metric counters ─────────────────────────────────────────────
+        const counterObs = new IntersectionObserver((entries, obs) => {
+            entries.forEach(({ isIntersecting, target: el }) => {
+                if (!isIntersecting) return;
+                const target = parseFloat(el.dataset.target);
+                const dec    = parseInt(el.dataset.decimal);
+                if (target === 0) { el.textContent = '0'; obs.unobserve(el); return; }
+                let cur = 0;
+                const inc = target / 80;
+                const tick = () => {
+                    cur = Math.min(cur + inc, target);
+                    el.textContent = cur.toFixed(dec);
+                    if (cur < target) requestAnimationFrame(tick);
+                };
+                tick();
+                obs.unobserve(el);
+            });
+        }, { threshold: 0.5 });
+        document.querySelectorAll('.metric-counter').forEach(el => counterObs.observe(el));
+
+        // ─── Pipeline card cursor expand ─────────────────────────────────
+        document.querySelectorAll('.hover-image').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                cursor.classList.remove('h-3', 'w-3', 'mix-blend-difference');
+                cursor.classList.add('h-20', 'w-20', 'mix-blend-normal', 'bg-white');
+                document.getElementById('cursor-text').textContent = 'VIEW';
+                document.getElementById('cursor-text').classList.remove('opacity-0');
+            });
+            card.addEventListener('mouseleave', () => {
+                cursor.classList.add('h-3', 'w-3', 'mix-blend-difference');
+                cursor.classList.remove('h-20', 'w-20', 'mix-blend-normal', 'bg-white');
+                document.getElementById('cursor-text').classList.add('opacity-0');
+            });
+        });
+
+        // ─── Fade-up on scroll ───────────────────────────────────────────
+        const fadeObs = new IntersectionObserver(entries => {
+            entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+        }, { threshold: 0.12 });
+        document.querySelectorAll('.fade-up').forEach(el => fadeObs.observe(el));
+    </script>
+
+</body>
+</html>
